@@ -8,6 +8,7 @@ public class WheellessWheeledVehicle : MonoBehaviour {
 	[SerializeField] Transform customCenterOfMass;
 	[SerializeField] PhysicMaterial defaultPhysicMaterial;
 	[SerializeField] Collider coll;
+	[SerializeField] VehicleTurret turret;
 
 	[Header("Driving")]
 	[SerializeField] float maxForwardSpeed;
@@ -49,10 +50,17 @@ public class WheellessWheeledVehicle : MonoBehaviour {
 		defaultDynamicFriction = coll.material.dynamicFriction;
 	}
 
+	void OnEnable () {
+		if(turret.gameObject.activeSelf) turret.gameObject.SetActive(false);	//turret gets activated on frame after body, otherwise it might not attach..
+	}
+
+	void OnDisable () {
+		if(turret != null) turret.gameObject.SetActive(false);
+	}
+
 	void Update () {
 		if(rb.IsSleeping()) rb.WakeUp();
-//		if(Input.GetKey(KeyCode.Q)) Time.timeScale = 0.01f;
-//		else Time.timeScale = 1f;
+		if(!turret.gameObject.activeSelf) turret.gameObject.SetActive(true);
 	}
 	
 	void FixedUpdate () {
