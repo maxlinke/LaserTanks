@@ -7,7 +7,7 @@ public class VehicleTurret : MonoBehaviour {
 	[SerializeField] Rigidbody rb;
 	[SerializeField] HingeJoint joint;
 	[SerializeField] Transform customCenterOfMass;
-	[SerializeField] protected Transform muzzle;
+	[SerializeField] Transform muzzle;
 
 	[SerializeField] float maxTurnSpeed;
 	[SerializeField] float maxTurnAcceleration;
@@ -38,7 +38,27 @@ public class VehicleTurret : MonoBehaviour {
 		if(Input.GetKeyDown(KeyCode.Space)){
 			Debug.Log("bang");	//TODO shoot (ABSTRACTION!!!!)
 		}
-		Debug.DrawRay(muzzle.transform.position, muzzle.transform.forward * 5f, Color.magenta, 0f, true);
+		float rayLength = 5f;
+//		RaycastHit hit;
+//		if(Physics.Raycast(muzzle.position, muzzle.forward, out hit, rayLength)){
+//			Debug.DrawLine(muzzle.position, hit.point, Color.magenta, 0f, true);
+//			RefractiveObject other = hit.collider.GetComponent<RefractiveObject>();
+//			if(other != null){
+//				float hitDist = (hit.point - muzzle.position).magnitude;
+//				bool totalReflection;
+//				Vector3 outputDir = Optics.Refract(muzzle.forward, hit.normal, 1f, other.RefractiveIndex, out totalReflection);
+//				Color drawColor = (totalReflection ? Color.green : Color.magenta);
+//				Debug.DrawRay(hit.point, outputDir.normalized * (rayLength - hitDist), drawColor, 0f, true);
+//			}
+//		}else{
+//			Debug.DrawRay(muzzle.transform.position, muzzle.transform.forward * rayLength, Color.magenta, 0f, true);
+//		}
+		Optics.LightcastHit lightcastHit;
+		Vector3[] points;
+		Optics.Lightcast(muzzle.position, muzzle.forward, out lightcastHit, out points, rayLength);
+		for(int i=1; i<points.Length; i++){
+			Debug.DrawLine(points[i-1], points[i], Color.magenta, 0f, true);
+		}
 	}
 
 	void FixedUpdate () {
