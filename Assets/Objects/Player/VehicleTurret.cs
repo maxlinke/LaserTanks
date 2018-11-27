@@ -12,7 +12,13 @@ public class VehicleTurret : MonoBehaviour {
 	[SerializeField] float maxTurnSpeed;
 	[SerializeField] float maxTurnAcceleration;
 
+	VehicleBody body;
 	float maxTurnForce;
+
+	void Start () {
+		ApplyCustomCenterOfMass(customCenterOfMass, rb);
+		maxTurnForce = rb.mass * maxTurnAcceleration;
+	}
 
 	void Reset () {
 		rb = GetComponent<Rigidbody>();
@@ -29,9 +35,8 @@ public class VehicleTurret : MonoBehaviour {
 		}
 	}
 
-	void Start () {
-		ApplyCustomCenterOfMass(customCenterOfMass, rb);
-		maxTurnForce = rb.mass * maxTurnAcceleration;
+	public void Initialize (VehicleBody body) {
+		this.body = body;
 	}
 	
 	void Update () {
@@ -39,20 +44,6 @@ public class VehicleTurret : MonoBehaviour {
 			Debug.Log("bang");	//TODO shoot (ABSTRACTION!!!!)
 		}
 		float rayLength = 5f;
-//		RaycastHit hit;
-//		if(Physics.Raycast(muzzle.position, muzzle.forward, out hit, rayLength)){
-//			Debug.DrawLine(muzzle.position, hit.point, Color.magenta, 0f, true);
-//			RefractiveObject other = hit.collider.GetComponent<RefractiveObject>();
-//			if(other != null){
-//				float hitDist = (hit.point - muzzle.position).magnitude;
-//				bool totalReflection;
-//				Vector3 outputDir = Optics.Refract(muzzle.forward, hit.normal, 1f, other.RefractiveIndex, out totalReflection);
-//				Color drawColor = (totalReflection ? Color.green : Color.magenta);
-//				Debug.DrawRay(hit.point, outputDir.normalized * (rayLength - hitDist), drawColor, 0f, true);
-//			}
-//		}else{
-//			Debug.DrawRay(muzzle.transform.position, muzzle.transform.forward * rayLength, Color.magenta, 0f, true);
-//		}
 		Optics.LightcastHit lightcastHit;
 		Vector3[] points;
 		Optics.Lightcast(muzzle.position, muzzle.forward, out lightcastHit, out points, rayLength);
@@ -62,12 +53,8 @@ public class VehicleTurret : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		float turnInput = GetTurnInput();
-		JointMotor motor = new JointMotor();
-		motor.targetVelocity = turnInput * maxTurnSpeed;
-		motor.force = maxTurnForce;
-		motor.freeSpin = false;
-		joint.motor = motor;
+//		DirectInputTurretTurning();
+		MousePointerTurretTurning();
 	}
 
 	void ApplyCustomCenterOfMass (Transform newCenterOfMass, Rigidbody rb) {
@@ -76,10 +63,45 @@ public class VehicleTurret : MonoBehaviour {
 		}
 	}
 
-	float GetTurnInput () {
+	void DirectInputTurretTurning () {
+		float turnInput = GetDirectTurnInput();
+		JointMotor motor = new JointMotor();
+		motor.targetVelocity = turnInput * maxTurnSpeed;
+		motor.force = maxTurnForce;
+		motor.freeSpin = false;
+		joint.motor = motor;
+	}
+
+	float GetDirectTurnInput () {
 		float output = 0f;
 		if(Input.GetKey(KeyCode.LeftArrow)) output -= 1f;
 		if(Input.GetKey(KeyCode.RightArrow)) output += 1f;
 		return output;
 	}
+
+	void MousePointerTurretTurning () {
+		Vector3 toMouse = GetVectorToMouse();
+		float deltaAngle = Vector3.Angle(toMouse, rb.transform.forward) * Mathf.Sign(Vector3.Dot(toMouse, rb.transform.right));
+		JointMotor motor = new JointMotor();
+		motor.targetVelocity = deltaAngle / Time.fixedDeltaTime;
+		motor.force = maxTurnForce;
+		motor.freeSpin = false;
+		joint.motor = motor;
+	}
+
+	//TODO parameters and stuff
+	Vector3 GetVectorToMouse () {
+		Camera cam = Camera.main;		//TODO actually reference the proper camera...
+		//so when networked move the main camera here OR instantiate / enable a new camera
+		Vector3 screenMousePos = Input.mousePosition;
+		Vector3 worldMousePos = cam.ScreenToWorldPoint(new Vector3(screenMousePos.x, screenMousePos.y, 1f));		//apparently any value for z will do...
+		Vector3 mouseRay = worldMousePos - cam.transform.position;
+		Vector3 planeOrigin = rb.worldCenterOfMass;
+		Vector3 planeNormal = rb.transform.up;
+		float lambda = Vector3.Dot(planeNormal, (planeOrigin - cam.transform.position)) / Vector3.Dot(planeNormal, mouseRay);
+		Vector3 mouseOnPlane = cam.transform.position + (lambda * mouseRay);
+		Vector3 toMouse = mouseOnPlane - rb.worldCenterOfMass;
+		return toMouse;
+	}
+
 }

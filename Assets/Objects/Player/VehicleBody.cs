@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class WheellessWheeledVehicle : MonoBehaviour {
+public class VehicleBody : MonoBehaviour {
 
 	[SerializeField] Rigidbody rb;
 	[SerializeField] Transform customCenterOfMass;
 	[SerializeField] PhysicMaterial defaultPhysicMaterial;
 	[SerializeField] Collider coll;
-	[SerializeField] VehicleTurret turret;
 
 	[Header("Driving")]
 	[SerializeField] float maxForwardSpeed;
@@ -38,6 +37,8 @@ public class WheellessWheeledVehicle : MonoBehaviour {
 	[Tooltip("X: speed from 0 to maxForwardSpeed, Y: 0=standingMaxAngularVelocity 1=movingMaxAngularVelocity")]
 	[SerializeField] AnimationCurve angularVelocityLerpCurve;
 
+	VehicleTurret turret;
+
 	float defaultStaticFriction, defaultDynamicFriction;
 	List<ContactPoint> contactPoints;
 	float steer;
@@ -50,17 +51,12 @@ public class WheellessWheeledVehicle : MonoBehaviour {
 		defaultDynamicFriction = coll.material.dynamicFriction;
 	}
 
-	void OnEnable () {
-		if(turret.gameObject.activeSelf) turret.gameObject.SetActive(false);	//turret gets activated on frame after body, otherwise it might not attach..
-	}
-
-	void OnDisable () {
-		if(turret != null) turret.gameObject.SetActive(false);
-	}
-
 	void Update () {
 		if(rb.IsSleeping()) rb.WakeUp();
-		if(!turret.gameObject.activeSelf) turret.gameObject.SetActive(true);
+	}
+
+	public void Initialize (VehicleTurret turret) {
+		this.turret = turret;
 	}
 	
 	void FixedUpdate () {
