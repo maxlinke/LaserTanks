@@ -10,14 +10,13 @@ public class VehicleTurret : MonoBehaviour {
 	[SerializeField] Transform muzzle;
 
 	[SerializeField] float maxTurnSpeed;
-	[SerializeField] float maxTurnAcceleration;
 
 	VehicleBody body;
 	float maxTurnForce;
 
 	void Start () {
 		ApplyCustomCenterOfMass(customCenterOfMass, rb);
-		maxTurnForce = rb.mass * maxTurnAcceleration;
+		maxTurnForce = rb.mass * maxTurnSpeed / Time.fixedDeltaTime;
 	}
 
 	void Reset () {
@@ -80,28 +79,36 @@ public class VehicleTurret : MonoBehaviour {
 	}
 
 	void MousePointerTurretTurning () {
-		Vector3 toMouse = GetVectorToMouse();
-		float deltaAngle = Vector3.Angle(toMouse, rb.transform.forward) * Mathf.Sign(Vector3.Dot(toMouse, rb.transform.right));
+//		Vector3 toMouse = GetMousePosOnTurretPlane() - rb.worldCenterOfMass;		//should use the joint as reference
+//		float deltaAngle = Vector3.Angle(toMouse, rb.transform.forward) * Mathf.Sign(Vector3.Dot(toMouse, rb.transform.right));
+		Vector3 toMouse = GetMousePosOnTurretPlane() - joint.transform.position;
+		float deltaAngle = Vector3.Angle(toMouse, joint.transform.forward) * Mathf.Sign(Vector3.Dot(toMouse, joint.transform.right));
+		float targetVelocity;
+		if(Mathf.Abs(deltaAngle) / Time.fixedDeltaTime > maxTurnSpeed){
+			targetVelocity = Mathf.Sign(deltaAngle) * maxTurnSpeed;
+		}else{
+			targetVelocity = deltaAngle / Time.fixedDeltaTime;
+		}
 		JointMotor motor = new JointMotor();
-		motor.targetVelocity = deltaAngle / Time.fixedDeltaTime;
+		motor.targetVelocity = targetVelocity;
 		motor.force = maxTurnForce;
 		motor.freeSpin = false;
 		joint.motor = motor;
 	}
 
 	//TODO parameters and stuff
-	Vector3 GetVectorToMouse () {
+	Vector3 GetMousePosOnTurretPlane () {
 		Camera cam = Camera.main;		//TODO actually reference the proper camera...
 		//so when networked move the main camera here OR instantiate / enable a new camera
 		Vector3 screenMousePos = Input.mousePosition;
 		Vector3 worldMousePos = cam.ScreenToWorldPoint(new Vector3(screenMousePos.x, screenMousePos.y, 1f));		//apparently any value for z will do...
 		Vector3 mouseRay = worldMousePos - cam.transform.position;
-		Vector3 planeOrigin = rb.worldCenterOfMass;
-		Vector3 planeNormal = rb.transform.up;
+//		Vector3 planeOrigin = rb.worldCenterOfMass;
+//		Vector3 planeNormal = rb.transform.up;
+		Vector3 planeOrigin = joint.transform.position;
+		Vector3 planeNormal = joint.transform.up;
 		float lambda = Vector3.Dot(planeNormal, (planeOrigin - cam.transform.position)) / Vector3.Dot(planeNormal, mouseRay);
-		Vector3 mouseOnPlane = cam.transform.position + (lambda * mouseRay);
-		Vector3 toMouse = mouseOnPlane - rb.worldCenterOfMass;
-		return toMouse;
+		return cam.transform.position + (lambda * mouseRay);
 	}
 
 }
